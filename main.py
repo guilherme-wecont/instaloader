@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, HTTPException
+
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 import subprocess
@@ -51,18 +52,11 @@ async def process_video(data: VideoRequest):
 
         subprocess.run([
             "yt-dlp",
-            "-o", video_path,
+            "-f", "bv*+ba/b",
             "--cookies", "cookies.txt",
+            "-o", video_path,
             url
         ], check=True)
-
-        # Verifica se há faixa de áudio
-        probe = subprocess.run([
-            "ffmpeg", "-i", video_path, "-hide_banner"
-        ], stderr=subprocess.PIPE, text=True)
-
-        if "Audio:" not in probe.stderr:
-            return JSONResponse(status_code=400, content={"detail": "Este vídeo não contém faixa de áudio."})
 
         subprocess.run([
             'ffmpeg', '-i', video_path, '-vn',
@@ -80,6 +74,8 @@ async def process_video(data: VideoRequest):
             ]
         }
 
+    except subprocess.CalledProcessError as e:
+        return JSONResponse(status_code=500, content={"detail": f"FFmpeg error: {e.stderr.decode()}"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
