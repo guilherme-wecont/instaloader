@@ -19,7 +19,11 @@ async def download_reel(request: ReelRequest):
 
         # Setup instaloader
         loader = Instaloader(dirname_pattern=tempfile.gettempdir(), save_metadata=False, download_comments=False)
-        
+
+        # Autenticação via cookies
+        loader.context.settings.set("sessionid", "73156571524%3A0u03Seos1LGQRZ%3A3%3AAYd0fxq_G1rN83f8XafFUT8L4z6Q3YTLPzk92OAqwA")
+        loader.context.settings.set("ds_user_id", "73156571524")
+
         post = Post.from_shortcode(loader.context, shortcode)
         loader.download_post(post, target=shortcode)
 
