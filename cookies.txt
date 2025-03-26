@@ -1,0 +1,6 @@
+# Netscape HTTP Cookie File
+.instagram.com	TRUE	/	FALSE	0	sessionid	123456789%3Aabcdef%3Aabcdef
+.instagram.com	TRUE	/	FALSE	0	ds_user_id	123456789
+.instagram.com	TRUE	/	FALSE	0	rur	ABC
+.instagram.com	TRUE	/	FALSE	0	mid	XYZ
+.instagram.com	TRUE	/	FALSE	0	ig_did	ABCDEFGHIJKLMN

@@ -1,36 +1,29 @@
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
-import yt_dlp
-import uuid
+
+import subprocess
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
 import os
 
 app = FastAPI()
 
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-class VideoRequest(BaseModel):
-    url: str
-
 @app.post("/download")
-async def download_video(req: VideoRequest):
-    video_id = str(uuid.uuid4())
-    output_template = os.path.join(DOWNLOAD_DIR, f"{video_id}.%(ext)s")
+async def download_video(request: Request):
+    data = await request.json()
+    url = data.get("url")
+    if not url:
+        return {"detail": "URL is required"}
 
-    ydl_opts = {
-        "outtmpl": output_template,
-        "format": "mp4",
-    }
+    output_file = "output.mp4"
+
+    command = [
+        "yt-dlp",
+        "--cookies", "cookies.txt",
+        "-o", output_file,
+        url
+    ]
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.download([req.url])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # Encontrar o arquivo baixado
-    for file in os.listdir(DOWNLOAD_DIR):
-        if file.startswith(video_id):
-            return {"file_path": f"/{DOWNLOAD_DIR}/{file}"}
-
-    raise HTTPException(status_code=500, detail="Arquivo não encontrado.")
+        subprocess.run(command, check=True)
+        return FileResponse(output_file, filename=output_file)
+    except subprocess.CalledProcessError as e:
+        return {"detail": f"Download failed: {e}"}
