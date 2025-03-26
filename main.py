@@ -1,29 +1,19 @@
-
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
 import subprocess
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
-import os
 
 app = FastAPI()
 
-@app.post("/download")
-async def download_video(request: Request):
-    data = await request.json()
-    url = data.get("url")
-    if not url:
-        return {"detail": "URL is required"}
-
-    output_file = "output.mp4"
-
-    command = [
-        "yt-dlp",
-        "--cookies", "cookies.txt",
-        "-o", output_file,
-        url
-    ]
-
+@app.get("/download")
+def download_video(link: str = Query(..., description="URL do Reels do Instagram")):
     try:
-        subprocess.run(command, check=True)
-        return FileResponse(output_file, filename=output_file)
-    except subprocess.CalledProcessError as e:
-        return {"detail": f"Download failed: {e}"}
+        result = subprocess.run(
+            ["yt-dlp", "--cookies", "cookies.txt", "--print", "url", link],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return JSONResponse(status_code=500, content={"detail": result.stderr.strip()})
+        return JSONResponse(content={"video_url": result.stdout.strip()})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
