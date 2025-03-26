@@ -1,19 +1,27 @@
-from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
 import subprocess
+import json
 
 app = FastAPI()
 
-@app.get("/download")
-def download_video(link: str = Query(..., description="URL do Reels do Instagram")):
+class ReelRequest(BaseModel):
+    url: str
+
+@app.post("/download")
+async def download_reel(request: ReelRequest):
+    result = subprocess.run(
+        ["yt-dlp", "-f", "mp4", "--cookies", "cookies.txt", "-j", request.url],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return {"detail": result.stderr}
+
     try:
-        result = subprocess.run(
-            ["yt-dlp", "--cookies", "cookies.txt", "--print", "url", link],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            return JSONResponse(status_code=500, content={"detail": result.stderr.strip()})
-        return JSONResponse(content={"video_url": result.stdout.strip()})
+        data = json.loads(result.stdout)
+        video_url = data.get("url")
+        return {"video_url": video_url}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"detail": str(e)})
+        return {"detail": f"Erro ao extrair URL do vídeo: {str(e)}"}
