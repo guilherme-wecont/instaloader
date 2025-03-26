@@ -2,7 +2,7 @@ import os
 import uvicorn
 import base64
 import tempfile
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from instaloader import Instaloader, Post
 
@@ -20,9 +20,14 @@ async def download_reel(request: ReelRequest):
         # Setup instaloader
         loader = Instaloader(dirname_pattern=tempfile.gettempdir(), save_metadata=False, download_comments=False)
 
-        # Autenticação via cookies
-        loader.context.settings.set("sessionid", "73156571524%3A0u03Seos1LGQRZ%3A3%3AAYd0fxq_G1rN83f8XafFUT8L4z6Q3YTLPzk92OAqwA")
-        loader.context.settings.set("ds_user_id", "73156571524")
+        # Autenticação via cookies usando load_session_from_dict
+        loader.context.load_session_from_dict(
+            username=None,
+            session={
+                "sessionid": "73156571524%3A0u03Seos1LGQRZ%3A3%3AAYd0fxq_G1rN83f8XafFUT8L4z6Q3YTLPzk92OAqwA",
+                "ds_user_id": "73156571524"
+            }
+        )
 
         post = Post.from_shortcode(loader.context, shortcode)
         loader.download_post(post, target=shortcode)
