@@ -50,13 +50,13 @@ async def process_video(data: VideoRequest):
         image1_path = f"{temp_dir}/thumb1.jpg"
         image2_path = f"{temp_dir}/thumb2.jpg"
 
-        subprocess.run([
-            "yt-dlp",
-            "-f", "mp4",
-            "-o", video_path,
-            "--cookies", "cookies.txt",
-            url
-        ], check=True)
+        try:
+    subprocess.run([
+        'ffmpeg', '-i', video_path, '-vn',
+        '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
+    raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
 
         subprocess.run([
             "ffmpeg", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2", audio_path
