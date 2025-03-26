@@ -49,7 +49,6 @@ async def process_video(data: VideoRequest):
         image1_path = f"{temp_dir}/thumb1.jpg"
         image2_path = f"{temp_dir}/thumb2.jpg"
 
-        # Baixa o vídeo com yt-dlp
         subprocess.run([
             "yt-dlp",
             "-o", video_path,
@@ -57,16 +56,19 @@ async def process_video(data: VideoRequest):
             url
         ], check=True)
 
-        # Extrai o áudio
-        try:
-            subprocess.run([
-                'ffmpeg', '-i', video_path, '-vn',
-                '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path
-            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
+        # Verifica se há faixa de áudio
+        probe = subprocess.run([
+            "ffmpeg", "-i", video_path, "-hide_banner"
+        ], stderr=subprocess.PIPE, text=True)
 
-        # Extrai imagens do vídeo
+        if "Audio:" not in probe.stderr:
+            return JSONResponse(status_code=400, content={"detail": "Este vídeo não contém faixa de áudio."})
+
+        subprocess.run([
+            'ffmpeg', '-i', video_path, '-vn',
+            '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path
+        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
         subprocess.run(["ffmpeg", "-i", video_path, "-ss", "00:00:01.000", "-vframes", "1", image1_path], check=True)
         subprocess.run(["ffmpeg", "-i", video_path, "-ss", "00:00:02.500", "-vframes", "1", image2_path], check=True)
 
