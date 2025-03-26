@@ -1,1 +1,6 @@
-# Copie os cookies exportados aqui (formato Netscape ou use --cookies-from-browser)
+# Netscape HTTP Cookie File
+.instagram.com	TRUE	/	FALSE	0	sessionid	73156571524%3A0u03Seos1LGQRZ%3A3%3AAYfgCyFF1WwpSXPdkYMiy468DpF6A_Ccix38pXEE8A
+.instagram.com	TRUE	/	FALSE	0	ds_user_id	73156571524
+.instagram.com	TRUE	/	FALSE	0	rur	"NCG\05473156571524\0541774538428:01f70495dd2221cd69dae190d49c39b08bdc22ebbe58269591ef7fd166b6aef8e4070ceb"
+.instagram.com	TRUE	/	FALSE	0	mid	ZoSJOQAEAAGG_9P18dYQ7C52gepL
+.instagram.com	TRUE	/	FALSE	0	ig_did	445F35B1-E2AA-4D4F-84A4-7EF504FDB5E9
