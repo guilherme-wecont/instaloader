@@ -1,84 +1,57 @@
-
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import subprocess
-import os
+import yt_dlp
 import uuid
-import shutil
-from fastapi.middleware.cors import CORSMiddleware
+import subprocess
+from pathlib import Path
 
 app = FastAPI()
-
-# Libera CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 class VideoRequest(BaseModel):
     url: str
 
-@app.post("/download")
-async def download_reel(data: VideoRequest):
-    url = data.url
-    try:
-        command = [
-            "yt-dlp",
-            "-g",
-            "--cookies", "cookies.txt",
-            url
-        ]
-        result = subprocess.check_output(command)
-        video_url = result.decode().strip().split("\n")[0]
-        return {"video_url": video_url}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"detail": str(e)})
-
 @app.post("/process-video")
-async def process_video(data: VideoRequest):
-    url = data.url
-    try:
-        uid = str(uuid.uuid4())
-        temp_dir = f"temp/{uid}"
-        os.makedirs(temp_dir, exist_ok=True)
+async def process_video(request: VideoRequest):
+    video_id = str(uuid.uuid4())
+    output_dir = Path("temp") / video_id
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-        video_path = f"{temp_dir}/video.mp4"
-        audio_path = f"{temp_dir}/audio.wav"
-        image1_path = f"{temp_dir}/thumb1.jpg"
-        image2_path = f"{temp_dir}/thumb2.jpg"
+    video_path = output_dir / "video.mp4"
+    audio_path = output_dir / "audio.wav"
+    image1_path = output_dir / "image1.jpg"
+    image2_path = output_dir / "image2.jpg"
+
+    try:
+        ydl_opts = {
+            'outtmpl': str(video_path),
+            'cookiefile': 'cookies.txt'
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([request.url])
 
         try:
-    subprocess.run([
-        'ffmpeg', '-i', video_path, '-vn',
-        '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path
-    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-except subprocess.CalledProcessError as e:
-    raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
+            subprocess.run([
+                'ffmpeg', '-i', str(video_path), '-vn',
+                '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', str(audio_path)
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
 
-        subprocess.run([
-            "ffmpeg", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2", audio_path
-        ], check=True)
-
-        subprocess.run(["ffmpeg", "-i", video_path, "-ss", "00:00:01.000", "-vframes", "1", image1_path], check=True)
-        subprocess.run(["ffmpeg", "-i", video_path, "-ss", "00:00:02.500", "-vframes", "1", image2_path], check=True)
+        try:
+            subprocess.run([
+                'ffmpeg', '-i', str(video_path), '-ss', '00:00:01.000', '-vframes', '1', str(image1_path)
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run([
+                'ffmpeg', '-i', str(video_path), '-ss', '00:00:02.000', '-vframes', '1', str(image2_path)
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            raise HTTPException(status_code=500, detail=f"FFmpeg image error: {e.stderr.decode()}")
 
         return {
-            "audio": f"/static/{uid}/audio.wav",
-            "images": [
-                f"/static/{uid}/thumb1.jpg",
-                f"/static/{uid}/thumb2.jpg"
-            ]
+            "audio": f"/{audio_path}",
+            "images": [f"/{image1_path}", f"/{image2_path}"]
         }
 
     except Exception as e:
-        return JSONResponse(status_code=500, content={"detail": str(e)})
-
-@app.get("/static/{uid}/{filename}")
-async def serve_static(uid: str, filename: str):
-    file_path = f"temp/{uid}/{filename}"
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    return JSONResponse(status_code=404, content={"detail": "Arquivo não encontrado"})
+        raise HTTPException(status_code=500, detail=str(e))
