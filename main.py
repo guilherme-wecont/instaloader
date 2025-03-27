@@ -52,7 +52,8 @@ async def process_video(data: VideoRequest):
 
         subprocess.run([
             "yt-dlp",
-            "-f", "bv*+ba/b",
+            "-f", "bestvideo+bestaudio",
+            "--merge-output-format", "mp4",
             "--cookies", "cookies.txt",
             "-o", video_path,
             url
