@@ -52,7 +52,7 @@ async def process_video(data: VideoRequest):
 
         subprocess.run([
             "yt-dlp",
-            "-f", "bestvideo+bestaudio",
+            "-f", "bv*+ba/b",
             "--merge-output-format", "mp4",
             "--cookies", "cookies.txt",
             "-o", video_path,
@@ -76,7 +76,8 @@ async def process_video(data: VideoRequest):
         }
 
     except subprocess.CalledProcessError as e:
-        return JSONResponse(status_code=500, content={"detail": f"FFmpeg error: {e.stderr.decode()}"})
+        err_msg = e.stderr.decode() if e.stderr else str(e)
+        return JSONResponse(status_code=500, content={"detail": f"FFmpeg error: {err_msg}"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
